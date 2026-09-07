@@ -1,0 +1,48 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Extract ZIP if uploaded
+      run: |
+        if [ -f "isadose.zip" ]; then
+          echo "Extracting isadose.zip..."
+          unzip -o isadose.zip
+        fi
+
+    - name: Find and Build Gradle Project
+      run: |
+        GRADLE_DIR=$(find . -maxdepth 4 -name "build.gradle*" -exec dirname {} \; | head -n 1)
+        if [ -n "$GRADLE_DIR" ]; then
+          echo "Found Gradle in $GRADLE_DIR"
+          cd "$GRADLE_DIR"
+          chmod +x gradlew || true
+          if [ -f "./gradlew" ]; then
+            ./gradlew assembleDebug
+          else
+            gradle assembleDebug
+          fi
+        else
+          echo "No Gradle project found after extraction"
+          exit 1
+        fi
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug
+        path: '**/*.apk'
